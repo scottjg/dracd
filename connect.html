@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<title>connect</title>
+	<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+	<script type="text/javascript" src="include/util.js"></script>
+	<script type="text/javascript" src="include/webutil.js"></script>
+	<script type="text/javascript" src="include/base64.js"></script>
+	<script type="text/javascript" src="include/websock.js"></script>
+	<script type="text/javascript" src="include/des.js"></script>
+	<script type="text/javascript" src="include/keysymdef.js"></script>
+	<script type="text/javascript" src="include/keyboard.js"></script>
+	<script type="text/javascript" src="include/input.js"></script>
+	<script type="text/javascript" src="include/display.js"></script>
+	<script type="text/javascript" src="include/jsunzip.js"></script>
+	<script type="text/javascript" src="include/rfb.js"></script>
+	<script type="text/javascript" src="include/keysym.js"></script>
+</head>
+<body onunload="">
+	<div style="padding: 32px; padding-top: 0px;">
+		<div style="display: none; padding-top: 0px" id="rfb">
+			<h3 style="margin-top: 5px">
+				<small>Connected to <span id="connected-to">1.2.3.4</span></small>
+			</h3>
+			<canvas id="noVNC_canvas" width="640px" height="0px"></canvas>
+		</div>
+		<div class="connect-form" style="max-width: 300px;">
+			<h1 style="padding-bottom: 10px"><small>Connect to a new host</small></h1>
+			<div class="alert alert-danger" role="alert" style="display: none">
+				<span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+				<span class="sr-only">Error:</span>
+				<span class="alert-text"></span>
+			</div>
+			<form method="post" onsubmit="return connectButtonClick()">
+				<div class="form-group">
+					<label for="host">Host</label>
+					<input type="text" class="form-control" id="host" name="host">
+				</div>
+				<div class="form-group">
+					<label for="login">Login</label>
+					<input type="text" class="form-control" id="login" name="login">
+				</div>
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input type="password" class="form-control" id="password" name="password">
+				</div>
+				<button type="submit" class="btn btn-default">Connect</button>
+			</form>
+		</div>
+
+		<div class="connect-progress" style="display: none">
+			<div class="progress" style="margin-top: 10px; margin-bottom: 10px; max-width: 480px;">
+				<div class="progress-bar progress-bar-striped active" role="progressbar" style="width: 0%"></div>
+			</div>
+			<div class="progress-text">beep</div>
+		</div>
+
+		<h1 style="padding-top: 20px;"><small>Recent Hosts</small></h1>
+		<ul class="list-unstyled" style="font-size: 18px">
+			{{range $host := .RecentDracs}}
+				<li><a href="#{{$host.Host}}">{{$host.Host}}</a>
+					{{if $host.Connected}}
+						<span id="hostinfo-{{$host.Id}}">
+							connected since {{ $host.FormattedTime }}
+							<button type="button" onclick="killSession({{$host.Host}},{{$host.Id}})" style="float: none" class="close" aria-label="Close"><span aria-hidden="true">&times;</span>
+						</span>
+					{{end}}
+				</li>
+			{{end}}
+		</ul>
+	</div>
+
+	<script>
+		"use strict";
+		var rfb
+		var rfbhost
+
+		function startRfbConnection(host) {
+			rfb = new RFB({
+				'target':       document.getElementById('noVNC_canvas'),
+				'encrypt':      (window.location.protocol === "https:"),
+				//'repeaterID':   WebUtil.getQueryVar('repeaterID', ''),
+				'true_color':   true, //WebUtil.getQueryVar('true_color', true),
+				'local_cursor': true, //WebUtil.getQueryVar('cursor', true),
+				'shared':       true, //WebUtil.getQueryVar('shared', true),
+				'view_only':    false, //WebUtil.getQueryVar('view_only', false),
+				'onUpdateState':  updateRfbState,
+				//'onXvpInit':    xvpInit,
+				//'onPasswordRequired':  passwordRequired
+			});
+
+			var wshost = window.location.hostname
+			var port = window.location.port
+			var password = ""
+			var path = "websockify/" + encodeURIComponent(host)
+
+			document.getElementById("rfb").style.display = ""
+			document.getElementById("connected-to").textContent = host
+			rfb.connect(wshost, port, password, path)
+		}
+
+		function updateRfbState(rfb, state, oldstate, msg) {
+			var level
+
+			switch (state) {
+				case 'failed':       level = "error";  break;
+				case 'fatal':        level = "error";  break;
+				case 'normal':       level = "normal"; break;
+				case 'disconnected': level = "normal"; break;
+				case 'loaded':       level = "normal"; break;
+				default:             level = "warn";   break;
+			}
+
+			if (level === "error") {
+				showError(rfbhost, "Disconnected")
+			}
+		}
+
+		function updateProgress(host, responseText, refreshNow) {
+			var connectForm = document.getElementsByClassName("connect-form")[0]
+			var connectProgress = document.getElementsByClassName("connect-progress")[0]
+			var progressText = document.getElementsByClassName("progress-text")[0]
+			var progressBar = document.getElementsByClassName("progress-bar")[0]
+			var hostField = document.getElementById("host")
+			var loginField = document.getElementById("login")
+			var passwordField = document.getElementById("password")
+
+			var resp = JSON.parse(responseText)
+			var status = resp["status"]
+			switch (status) {
+				case "connecting":
+					connectForm.style.display = "none"
+					connectProgress.style.display = ""
+					progressText.textContent = "Connecting..."
+					progressBar.style.width = "25%"
+					break
+				case "connected":
+					progressText.textContent = "Authenticating..."
+					progressBar.style.width = "50%"
+					break
+				case "video connected":
+					progressText.textContent = "Waiting for Video..."
+					progressBar.style.width = "75%"
+					break
+				case "ready":
+					progressText.textContent = ""
+					progressBar.style.width = "100%"
+					connectProgress.style.display = ""
+					connectProgress.style.display = "none"
+					startRfbConnection(host)
+					return
+					break
+				case "video connection error":
+				case "connection error":
+					showError(host, "Failed to connect")
+					return
+					break
+				case "server error":
+					showError(host, "Server error")
+					return
+					break
+				case "auth error":
+					showError(host, "Invalid login or password")
+					return
+					break
+				case "need credentials":
+					hostField.value = host
+					loginField.value = ""
+					passwordField.value = ""
+
+					loginField.focus()
+					return
+					break
+			}
+
+			if (host != null) {
+				if (refreshNow) {
+					pollStatus(host)
+				} else {
+					setTimeout(function() { pollStatus(host) }, 500)
+				}
+			}
+		}
+
+		function showError(host, err) {
+			var connectForm = document.getElementsByClassName("connect-form")[0]
+			var connectProgress = document.getElementsByClassName("connect-progress")[0]
+			var hostField = document.getElementById("host")
+			var loginField = document.getElementById("login")
+			var passwordField = document.getElementById("password")
+
+			var el = document.getElementsByClassName("alert-text")[0]
+			el.textContent = err
+			el = document.getElementsByClassName("alert")[0]
+			el.style.display = ""
+			connectForm.style.display = ""
+			connectProgress.style.display = "none"
+
+			hostField.value = host
+			loginField.value = ""
+			passwordField.value = ""
+
+			loginField.focus()
+
+			window.location = "#"
+		}
+
+		function pollStatus(host) {
+			var request = new XMLHttpRequest();
+			request.open("GET", "/status/" + encodeURIComponent(host), true)
+			request.onreadystatechange = function() {
+				if (host != rfbhost)
+					return
+
+				if (this.readyState === 4) {
+					if (this.status == 200) {
+						updateProgress(host, this.responseText, true)
+					} else {
+						showError(host, "server error", false)
+					}
+				}
+			}
+			request.onerror = function() {
+				if (host != rfbhost)
+					return
+
+				showError(host, "server error", false)
+				return false
+			}
+			request.send()
+		}
+
+		function connect(host, login, password) {
+			rfbhost = host
+
+			var request = new XMLHttpRequest();
+			request.open("POST", window.location.pathname, true)
+			request.setRequestHeader(
+				'Content-Type',
+				'application/json; charset=UTF-8'
+			)
+			request.setRequestHeader(
+				'X-Requested-With',
+				'XMLHttpRequest'
+			)
+			request.onreadystatechange = function() {
+				if (host != rfbhost)
+					return
+
+				if (this.readyState === 4) {
+					if (this.status == 200) {
+						updateProgress(host, this.responseText, true)
+					} else {
+						showError(host, "server error", false)
+					}
+				}
+			}
+			request.onerror = function() {
+				if (host != rfbhost)
+					return
+
+				showError(host, "server error", false)
+				return false
+			}
+			request.send(JSON.stringify({host: host, login: login, password: password}))
+
+			var newHash = "#" + host
+			if (window.location.hash != newHash) {
+				window.location = newHash
+			}
+		}
+
+		function connectButtonClick() {
+			var host = document.getElementsByName("host")[0].value
+			var login = document.getElementsByName("login")[0].value
+			var password = document.getElementsByName("password")[0].value
+			document.getElementsByName("password")[0].value = ""
+
+			var el = document.getElementsByClassName("alert")[0]
+			el.style.display = "none"
+
+			connect(host, login, password)
+			return false
+		}
+
+		function connectRecent(host) {
+			var el = document.getElementsByClassName("alert")[0]
+			el.style.display = "none"
+
+			connect(host, null, null)
+			return false
+		}
+
+		function connectHash(hash) {
+			if (/^(.*):(.*)@(.*)/.exec(hash) != null) {
+				var host = RegExp.$3
+				var login = RegExp.$1
+				var password = RegExp.$2
+				window.location.replace("#" + host)
+				connect(host, login, password)
+			} else {
+				connectRecent(hash)
+			}
+		}
+
+		function killSession(host, id) {
+			var choice = confirm("Are you sure you want to end the session and terminate all connected connected clients for " + host + "?")
+			if (choice == true) {
+				var request = new XMLHttpRequest();
+				request.open("POST", "/killsession", true)
+				request.setRequestHeader(
+					'Content-Type',
+					'application/x-www-form-urlencoded'
+				)
+				request.send("host=" + encodeURIComponent(host))
+
+				var el = document.getElementById("hostinfo-" + id)
+				el.remove()
+			}
+		}
+
+		document.addEventListener('DOMContentLoaded',function() {
+			var connectToHost = {{ .ConnectToHost }}
+			if (connectToHost === "") {
+				connectToHost = window.location.hash.replace(/^#/, '')
+			}
+			if (connectToHost != "") {
+				connectHash(connectToHost)
+			}
+		})
+
+		window.addEventListener('popstate', function(event) {
+			var hash = window.location.hash.replace(/^#/, '')
+			if (rfbhost === hash) {
+				return
+			}
+
+			if (rfb != null) {
+				rfb.disconnect()
+				rfb = null
+			}
+			rfbhost = ""
+
+			if (hash === "") {
+				var connectForm = document.getElementsByClassName("connect-form")[0]
+				var connectProgress = document.getElementsByClassName("connect-progress")[0]
+				connectForm.style.display = ""
+				connectProgress.style.display = "none"
+				document.getElementById("rfb").style.display = "none"
+			} else {
+				connectHash(hash)
+			}
+		})
+
+	</script>
+</body>
+</html>

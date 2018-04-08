@@ -1,0 +1,15 @@
+<html>
+<head>
+<title>sup</title>
+</head>
+
+<body>
+<form action="/login" method="POST">
+login: <input type="text" name="login"><br/>
+password: <input type="password" name="password"><br/>
+<input type="hidden" name="csrf_token" value="{{.CsrfToken}}">
+<input type="submit" value="login">
+</form>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+- curl for drac4/5
+  - connecting races with session timeout
+  - first frame shouldn't always show "connecting..." message
+  - drac4 needs keepalives
+
+- figure out how auth will work on the png and gif endpoints
+- error handling. check all the read/write calls?
+
+DRAC4: poweredge 1850? 2850? r320? 
+DRAC5: PowerEdge 2950 / 1950
+DRAC6: Poweredge R310
