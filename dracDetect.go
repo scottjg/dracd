@@ -33,7 +33,7 @@ func getDracType(host string, user string, password string) (sessionUser string,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 			//buggy drac4 won't work if we negotiate higher max version
-			MaxVersion: tls.VersionTLS10,
+			//MaxVersion: tls.VersionTLS10,
 		},
 	}
 
