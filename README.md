@@ -19,12 +19,7 @@ $ git clone https://github.com/scottjg/dracd
 $ cd dracd
 ```
 
-If you're looking to build with all the features:
-```
-$ go get -tags 'openssl gif'
-```
-
-Or if you just want the basics (note libpng is still required):
+Then, you can build the basic daemon:
 ```
 $ go get
 ```
@@ -33,6 +28,12 @@ Then you can just run the daemon
 ```
 $ ./dracd
 ```
+
+Alternatively, you can build with the additional features if you have the dependencies installed on your sytsem
+```
+$ go get -tags 'openssl gif'
+```
+
 
 ![](https://cl.ly/373d1V1y2b2y/Screen%20Shot%202018-07-15%20at%201.35.03%20PM.png)
 ![](https://cl.ly/0p2u1v2V2P3p/Screen%20Shot%202018-07-15%20at%201.39.56%20PM.png)
