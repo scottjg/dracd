@@ -33,3 +33,7 @@ Then you can just run the daemon
 ```
 $ ./dracd
 ```
+
+![](https://cl.ly/373d1V1y2b2y/Screen%20Shot%202018-07-15%20at%201.35.03%20PM.png)
+![](https://cl.ly/0p2u1v2V2P3p/Screen%20Shot%202018-07-15%20at%201.39.56%20PM.png)
+![](https://cl.ly/0i2A0J2a1l1d/Screen%20Shot%202018-07-15%20at%201.35.53%20PM.png)
