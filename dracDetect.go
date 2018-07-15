@@ -52,7 +52,7 @@ func getDracType(host string, user string, password string) (sessionUser string,
 		Jar:       jar,
 	}
 
-	req, err := http.NewRequest("GET", "https://" + host + "/", nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/", nil)
 	if err != nil {
 		return "", "", -1, -1, -1, err
 	}

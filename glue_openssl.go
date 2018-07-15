@@ -17,7 +17,7 @@ import "C"
 
 //export GlueStartSslCtrl
 func GlueStartSslCtrl(ctx *C.client_ctx) {
-	clientCtx := (*DracCtx)(C.get_client_data(ctx))
+	clientCtx := GetDracCtx(ctx)
 	//tlsconfig := &tls.Config{
 	//	InsecureSkipVerify: true,
 	//}
@@ -42,7 +42,7 @@ func GlueStartSslCtrl(ctx *C.client_ctx) {
 
 //export GlueStartSslVideo
 func GlueStartSslVideo(ctx *C.client_ctx) {
-	clientCtx := (*DracCtx)(C.get_client_data(ctx))
+	clientCtx := GetDracCtx(ctx)
 	//tlsconfig := &tls.Config{
 	//	InsecureSkipVerify: true,
 	//}

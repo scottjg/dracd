@@ -16,37 +16,37 @@ import "C"
 
 //export GlueStartSslCtrl
 func GlueStartSslCtrl(ctx *C.client_ctx) {
-	clientCtx := (*DracCtx)(C.get_client_data(ctx))
+	clientCtx := GetDracCtx(ctx)
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,
 	}
 
 	tlsConn := tls.Client(clientCtx.ctrlSocket, tlsconfig)
-	//log.Printf("starting tls\n")
+	log.Printf("starting tls\n")
 	err := tlsConn.Handshake()
 	if err != nil {
 		log.Printf("err: %v\n", err)
 		return
 	}
-	//log.Printf("started tls\n")
+	log.Printf("started tls\n")
 	ctrlSocket := net.Conn(tlsConn)
 	clientCtx.ctrlSocket = ctrlSocket
 }
 
 //export GlueStartSslVideo
 func GlueStartSslVideo(ctx *C.client_ctx) {
-	clientCtx := (*DracCtx)(C.get_client_data(ctx))
+	clientCtx := GetDracCtx(ctx)
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: true,
 	}
 	tlsConn := tls.Client(clientCtx.videoSocket, tlsconfig)
-	//log.Printf("starting tls\n")
+	log.Printf("starting video tls\n")
 	err := tlsConn.Handshake()
 	if err != nil {
 		log.Printf("err: %v\n", err)
 		return
 	}
-	//log.Printf("started tls\n")
+	log.Printf("started video tls\n")
 	videoSocket := net.Conn(tlsConn)
 	clientCtx.videoSocket = videoSocket
 }

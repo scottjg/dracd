@@ -165,7 +165,7 @@ func ctrlReader(dracCtx *DracCtx, dracFinishedEvent chan int, login string, pass
 				State: "connected",
 				Time:  time.Now(),
 			}
-			dracCtx.ctx = C.alloc_client_ctx(unsafe.Pointer(dracCtx), C.int(dracType))
+			AllocDracClientCtx(dracCtx)
 			username := C.CString(login)
 			password := C.CString(passwd)
 			C.connect_start_ctrl(dracCtx.ctx, username, password)
@@ -284,7 +284,7 @@ loop:
 	}
 
 	if dracCtx.ctx != nil {
-		C.free_client_ctx(dracCtx.ctx)
+		FreeDracClientCtx(dracCtx)
 	}
 }
 
